@@ -52,7 +52,7 @@ def make_mp4_movie(image_paths=filtered_paths, save_dir='temp',
         print(colored_output)
 
         shutil.rmtree(save_dir)
-        os.mkdir(target_dir)
+        os.mkdir(save_dir)
 
     else:
         print('The movie rendering failed')
