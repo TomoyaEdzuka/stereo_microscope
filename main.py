@@ -1,16 +1,19 @@
 import os
+import shutil
 import sys
 
 import termcolor
 
+import ffmpeg_util
 import path_util
 import resize_image
-import ffmpeg_util
 
 if not os.path.exists('temp'):
     os.makedirs('temp')
-if not os.path.exists('ffmpeg_output'):
-    os.makedirs('fmpeg_output')
+if not os.path.exists('ffmpeg_out'):
+    os.makedirs('ffmpeg_out')
+
+
 
 target_dir, n = path_util.get_target_dir('sample.txt')
 path_list = path_util.get_sorted_paths(target_dir, 'JPG')
@@ -38,15 +41,27 @@ def make_mp4_movie(image_paths=filtered_paths, save_dir='temp',
 
     for i, fp in enumerate(resized_paths):
         os.rename(fp, os.path.join(save_dir, f'{i + 1:0=5}.jpg'))
+    out_name = os.path.join(out_dir, out_title)
     ffmpeg_util.render_jpg_to_mp4(jpg_pattern=os.path.join(save_dir, '%05d.jpg'),
                                   frame_rate=frame_rate,
-                                  out_name=os.path.join(out_dir, out_title))
+                                  out_name=out_name)
 
-    message = f'The movie was saved as {os.path.join(out_dir, out_title)}'
-    colored_output = termcolor.colored(message, color="blue", attrs=["bold"])
-    print(colored_output)
+    if os.path.exists(out_name):
+        message = f'The movie was saved as {out_name}'
+        colored_output = termcolor.colored(message, color="blue", attrs=["bold"])
+        print(colored_output)
 
+        shutil.rmtree(save_dir)
+        os.mkdir(target_dir)
 
+    else:
+        print('The movie rendering failed')
+        sys.exit(-1)
+
+if __name__ == '__main__':
+    make_mp4_movie(image_paths=filtered_paths, save_dir='temp',
+                   image_scale=0.5, frame_rate=30,
+                   out_dir='ffmpeg_out')
 # save_dir = resize_image.validate_save_dir(path_list[0])
 # if save_dir:
 #     for p in filtered_paths:
