@@ -1,6 +1,6 @@
 import os
 
-import PIL
+import PIL.ImageOps
 import termcolor
 from PIL import Image
 
@@ -22,10 +22,7 @@ def validate_save_dir(file_path):
     return save_dir
 
 
-
 def resize_img(file_path: str, save_dir: str, scale: float = 0.5) -> PIL.Image.Image:
-
-
     img = Image.open(file_path)  # img: PIL.Image.Image object
     resized_width = int(scale * img.width)
     resized_height = int(scale * img.height)
@@ -34,7 +31,7 @@ def resize_img(file_path: str, save_dir: str, scale: float = 0.5) -> PIL.Image.I
         resized_width = resized_width + 1
     if resized_height % 2 == 1:
         resized_height = resized_height + 1
-    resized_img = img.resize((resized_width, resized_height), Image.ANTIALIAS)
+    resized_img = img.resize((resized_width, resized_height), Image.LANCZOS)
     # img = img.convert("YCbCr")
     # yy, cb, cr = img.split()
     # yy = ImageOps.equalize(yy)
@@ -43,7 +40,6 @@ def resize_img(file_path: str, save_dir: str, scale: float = 0.5) -> PIL.Image.I
 
     base_file_name = os.path.basename(file_path)
     name, ext = base_file_name.split('.')
-
 
     scale = str(scale)
     if scale.find("."):
@@ -77,6 +73,55 @@ def change_contrast(image: PIL.Image.Image,
         print(f'The image was saved as {colored_output}')
 
     return result_image
+
+
+def exif_transpose(img):
+    if not img:
+        return img
+    exif_orientation_tag = 274
+    # Check for EXIF data (only present on some files)
+    if hasattr(img, "_getexif") and isinstance(img._getexif(), dict) and exif_orientation_tag in img._getexif():
+        exif_data = img._getexif()
+        orientation = exif_data[exif_orientation_tag]
+        # Handle EXIF Orientation
+        if orientation == 1:
+            # Normal image - nothing to do!
+            pass
+        elif orientation == 2:
+            # Mirrored left to right
+            img = img.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+        elif orientation == 3:
+            # Rotated 180 degrees
+            img = img.rotate(180)
+        elif orientation == 4:
+            # Mirrored top to bottom
+            img = img.rotate(180).transpose(PIL.Image.FLIP_LEFT_RIGHT)
+        elif orientation == 5:
+            # Mirrored along top-left diagonal
+            img = img.rotate(-90, expand=True).transpose(PIL.Image.FLIP_LEFT_RIGHT)
+        elif orientation == 6:
+            # Rotated 90 degrees
+            img = img.rotate(-90, expand=True)
+        elif orientation == 7:
+            # Mirrored along top-right diagonal
+            img = img.rotate(90, expand=True).transpose(PIL.Image.FLIP_LEFT_RIGHT)
+        elif orientation == 8:
+            # Rotated 270 degrees
+            img = img.rotate(90, expand=True)
+    return img
+
+
+def transpose_image(file, mode='RGB'):
+    # Load the image with PIL
+    img = PIL.Image.open(file)
+    if hasattr(PIL.ImageOps, 'exif_transpose'):
+        # Very recent versions of PIL can do exit transpose internally
+        img = PIL.ImageOps.exif_transpose(img)
+    else:
+        # Otherwise, do the exif transpose ourselves
+        img = exif_transpose(img)
+    img = img.convert(mode)
+    return img
 
 
 # if __name__ == "__main__":

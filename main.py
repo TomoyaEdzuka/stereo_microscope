@@ -1,3 +1,4 @@
+import glob
 import os
 import shutil
 import sys
@@ -13,8 +14,6 @@ if not os.path.exists('temp'):
 if not os.path.exists('ffmpeg_out'):
     os.makedirs('ffmpeg_out')
 
-
-
 target_dir, n = path_util.get_target_dir('sample.txt')
 path_list = path_util.get_sorted_paths(target_dir, 'JPG')
 
@@ -23,9 +22,10 @@ filtered_paths = [p for i, p in enumerate(path_list) if i % n == 0]
 
 def make_mp4_movie(image_paths=filtered_paths, save_dir='temp',
                    image_scale=0.5, frame_rate=30,
-                   out_dir='ffmpeg_out'):
+                   out_dir='ffmpeg_out', rm_resized=True, over_write=False):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
 
@@ -35,28 +35,44 @@ def make_mp4_movie(image_paths=filtered_paths, save_dir='temp',
         print('image path is None')
         sys.exit(-1)
 
-    for p in image_paths:
-        resize_image.resize_img(p, save_dir, image_scale)
-    resized_paths = path_util.get_sorted_paths(save_dir, 'jpg')
+    resized_paths = glob.glob(save_dir + os.sep + '*.jpg')
 
-    for i, fp in enumerate(resized_paths):
-        os.rename(fp, os.path.join(save_dir, f'{i + 1:0=5}.jpg'))
+    if not resized_paths:
+        resized_paths = glob.glob(save_dir + os.sep + '*.jpg')
+        if over_write:
+            shutil.rmtree(save_dir)
+            os.mkdir(save_dir)
+    else:
+        for p in image_paths:
+            resize_image.resize_img(p, save_dir, image_scale)
+        resized_paths = path_util.get_sorted_paths(save_dir, 'jpg')
+
+        for i, fp in enumerate(resized_paths):
+            os.rename(fp, os.path.join(save_dir, f'{i + 1:0=5}.jpg'))
+
     out_name = os.path.join(out_dir, out_title)
     ffmpeg_util.render_jpg_to_mp4(jpg_pattern=os.path.join(save_dir, '%05d.jpg'),
                                   frame_rate=frame_rate,
                                   out_name=out_name)
 
     if os.path.exists(out_name):
-        message = f'The movie was saved as {out_name}'
-        colored_output = termcolor.colored(message, color="blue", attrs=["bold"])
-        print(colored_output)
+        if rm_resized:
 
-        shutil.rmtree(save_dir)
-        os.mkdir(save_dir)
+            message = f'The movie was saved as {out_name}'
+            colored_output = termcolor.colored(message, color="blue", attrs=["bold"])
+            print(colored_output)
 
+            shutil.rmtree(save_dir)
+            os.mkdir(save_dir)
+            print('The all resized image has been deleted.')
+        else:
+            message = f'The movie was saved as {out_name}'
+            colored_output = termcolor.colored(message, color="blue", attrs=["bold"])
+            print(colored_output)
     else:
         print('The movie rendering failed')
         sys.exit(-1)
+
 
 if __name__ == '__main__':
     make_mp4_movie(image_paths=filtered_paths, save_dir='temp',

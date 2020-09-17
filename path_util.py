@@ -49,10 +49,8 @@ def get_target_dir(ref_file='sample.txt'):  # return Tuple:(str, int)
 
         try:
             n
-            # 変数testが存在する場合は以降の処理が実行
         except NameError:
             n = 1
-            # 変数testが存在しない場合は以降の処理が実行
 
         return folder_name, n
 
